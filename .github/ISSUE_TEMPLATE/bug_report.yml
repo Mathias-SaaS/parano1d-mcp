@@ -1,0 +1,58 @@
+name: Bug report
+description: Something is broken or unsafe.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste wallet keys, seeds, balances, private addresses, or node data files.
+        For a security issue, read SECURITY.md and report privately instead.
+  - type: input
+    id: version
+    attributes:
+      label: parano1d-mcp version
+      description: Output of `parano1d-mcp --version`, or the commit SHA.
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [macOS, Linux, Windows]
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Parano1d node version
+      description: The node's version or the `getNativeProtocol` tip height.
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: MCP mode
+      options: [read, wallet, admin]
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs
+      description: Output with `RUST_LOG=info`. Remove addresses, balances, and anything private.
+      render: text

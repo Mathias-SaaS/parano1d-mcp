@@ -1,0 +1,34 @@
+name: Feature request
+description: Propose a new tool, action, or behavior.
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do that the current tools do not support?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: safety
+    attributes:
+      label: Safety impact
+      description: Does the proposal read data, spend funds, or control the node?
+      options:
+        - Read-only
+        - Can spend funds (wallet mode)
+        - Can control the node (admin mode)
+        - Unsure
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
