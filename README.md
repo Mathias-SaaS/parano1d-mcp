@@ -298,7 +298,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Changes to `src/manifest.rs`, `src/safet
 
 ## Maintainer
 
-Maintained by [@0xCordeiro](https://x.com/0xCordeiro).
+Maintained by [@Mathias_SaaS](https://x.com/Mathias_SaaS).
 
 ## License
 
