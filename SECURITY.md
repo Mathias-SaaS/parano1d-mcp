@@ -10,7 +10,7 @@
 
 Do not open a public issue. Use GitHub's private vulnerability reporting:
 **Security → Advisories → Report a vulnerability**, or open
-<https://github.com/0xC0rd31r0/parano1d-mcp/security/advisories/new> directly (private
+<https://github.com/noidium/parano1d-mcp/security/advisories/new> directly (private
 vulnerability reporting is enabled on this repository).
 
 Include the affected version, platform, mode (`read`, `wallet`, `admin`), reproduction steps,
