@@ -3,6 +3,11 @@ description: Propose a new tool, action, or behavior.
 title: "[feature] "
 labels: ["enhancement"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste wallet keys, seeds, balances, private addresses, or node data files.
+        Agents filing on a user's behalf: describe the task you could not complete with the current tools.
   - type: textarea
     id: problem
     attributes:
@@ -14,8 +19,29 @@ body:
     id: proposal
     attributes:
       label: Proposed behavior
+      description: The tool, action and arguments you would expect, and what it should return.
     validations:
       required: true
+  - type: input
+    id: tool
+    attributes:
+      label: Existing tool closest to it
+      description: For example `native_read` or `rpc_call`. Leave empty for a new tool.
+  - type: input
+    id: rpc_method
+    attributes:
+      label: JSON-RPC method involved
+      description: The node method the feature would use, for example `paranoid_getNativeProtocol`, if known.
+  - type: input
+    id: node
+    attributes:
+      label: Parano1d node version
+      description: The node version you need it on, for example `v2.1.0`.
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network
+      options: [mainnet, testnet, both, unsure]
   - type: dropdown
     id: safety
     attributes:
@@ -32,3 +58,14 @@ body:
     id: alternatives
     attributes:
       label: Alternatives considered
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Requested by an AI agent? (optional)
+      description: Helps triage requests written from an agent's own tool output.
+      options:
+        - "No, a person"
+        - "Yes, an agent filed it for a person"
+        - "Yes, an agent filed it on its own"
+    validations:
+      required: false

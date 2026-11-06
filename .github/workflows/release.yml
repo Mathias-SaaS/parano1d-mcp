@@ -154,3 +154,132 @@ jobs:
               --notes-file CHANGELOG.md
           fi
           gh release upload "$TAG" ./dist/* --clobber
+
+  # Publishing runs only for a release tag, after the attested build and the
+  # draft release above. Both jobs use the `release` environment: give it the
+  # maintainer as a required reviewer and limit it to `v*` tags, so nothing
+  # reaches crates.io or the MCP Registry until the draft has been checked.
+  crates-io:
+    name: publish (crates.io)
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: release
+    # Trusted publishing: the OIDC token is exchanged for a short-lived
+    # crates.io token, which the action revokes when the job ends.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the pinned toolchain
+        shell: bash
+        run: rustup show
+      - name: Check the tag matches Cargo.toml and server.json
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          crate="$(cargo metadata --no-deps --locked --format-version 1 \
+            | jq -r '.packages[] | select(.name == "parano1d-mcp") | .version')"
+          server="$(jq -r '.version' server.json)"
+          package="$(jq -r '.packages[] | select(.registryType == "cargo") | .version' server.json)"
+          echo "tag $version, Cargo.toml $crate, server.json $server / $package"
+          [ "$crate" = "$version" ] && [ "$server" = "$version" ] && [ "$package" = "$version" ]
+      # The very first publish of a crate cannot use trusted publishing: the
+      # crate must already exist on crates.io before a trusted publisher can
+      # be configured for it. 0.1.4 is therefore published once by hand with a
+      # publish-new token, which is revoked afterwards; this step then finds
+      # the version already there and the job skips the upload.
+      - name: Is this version already on crates.io?
+        id: published
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          index="$(curl --fail --silent --show-error --location \
+            https://index.crates.io/pa/ra/parano1d-mcp || true)"
+          if printf '%s\n' "$index" | jq -e --arg v "$version" 'select(.vers == $v)' >/dev/null 2>&1; then
+            echo "parano1d-mcp $version is already on crates.io; skipping the upload"
+            echo "done=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "done=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Authenticate to crates.io
+        if: steps.published.outputs.done != 'true'
+        id: auth
+        uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1.0.6
+      - name: Publish to crates.io
+        if: steps.published.outputs.done != 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: cargo publish --locked
+
+  mcp-registry:
+    name: publish (MCP Registry)
+    needs: crates-io
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: release
+    # GitHub OIDC proves the workflow runs in the noidium organisation, which
+    # grants the io.github.noidium/* namespace.
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      MCP_PUBLISHER_VERSION: v1.8.7
+      # SHA-256 of mcp-publisher_linux_amd64.tar.gz from that release (equal to
+      # its registry_1.8.7_checksums.txt entry). Update both lines together.
+      MCP_PUBLISHER_SHA256: 00b21004149a4ce66f0782508ae4a2bce67d1bea395a8da0bd8028159fb59579
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download and verify mcp-publisher
+        run: |
+          set -euo pipefail
+          archive="mcp-publisher_linux_amd64.tar.gz"
+          curl --fail --location --silent --show-error --output "$archive" \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/$archive"
+          echo "${MCP_PUBLISHER_SHA256}  $archive" | sha256sum -c -
+          tar -xzf "$archive" mcp-publisher
+          rm -f "$archive"
+          ./mcp-publisher --version || true
+      - name: Check server.json matches the tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          [ "$(jq -r '.version' server.json)" = "$version" ]
+          [ "$(jq -r '.packages[] | select(.registryType == "cargo") | .version' server.json)" = "$version" ]
+      # The registry checks ownership by finding `mcp-name: <name>` in the
+      # README crates.io renders; wait until that version's README is served.
+      - name: Wait for the crates.io README
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          name="$(jq -r '.name' server.json)"
+          for _ in $(seq 1 30); do
+            url="$(curl --fail --silent --show-error -H 'Accept: application/json' \
+              "https://crates.io/api/v1/crates/parano1d-mcp/$version/readme" | jq -r '.url // empty' || true)"
+            if [ -n "$url" ] && curl --fail --silent --show-error "$url" | grep -qF "mcp-name: $name"; then
+              echo "README for $version carries mcp-name: $name"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "the crates.io README for $version does not show mcp-name: $name"
+          exit 1
+      - name: Authenticate to the MCP Registry
+        run: ./mcp-publisher login github-oidc
+      - name: Publish to the MCP Registry
+        run: ./mcp-publisher publish

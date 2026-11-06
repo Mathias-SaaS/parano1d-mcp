@@ -1,5 +1,11 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Report a security issue privately
+    url: https://github.com/noidium/parano1d-mcp/security/advisories/new
+    about: A guard, mode or spend-cap bypass, or any other vulnerability. Uses private vulnerability reporting; see SECURITY.md.
   - name: Security policy
-    url: https://github.com/0xC0rd31r0/parano1d-mcp/blob/main/SECURITY.md
-    about: Report a guard bypass, cap bypass, or other security issue privately.
+    url: https://github.com/noidium/parano1d-mcp/blob/main/SECURITY.md
+    about: What is in scope and how reports are handled.
+  - name: Community chat (Discord)
+    url: https://discord.gg/y2V7xTu6b
+    about: Questions and discussion. Bugs and requests belong in an issue form.

@@ -1,0 +1,81 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.noidium/parano1d-mcp",
+  "title": "Parano1d node",
+  "description": "Local Parano1d node over MCP. Read-only by default; sending needs the opt-in, capped wallet mode.",
+  "version": "0.1.4",
+  "websiteUrl": "https://github.com/noidium/parano1d-mcp",
+  "repository": {
+    "url": "https://github.com/noidium/parano1d-mcp",
+    "source": "github",
+    "id": "1445338367"
+  },
+  "packages": [
+    {
+      "registryType": "cargo",
+      "registryBaseUrl": "https://crates.io",
+      "identifier": "parano1d-mcp",
+      "version": "0.1.4",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "PARANOID_RPC_URL",
+          "description": "Node JSON-RPC URL. Loopback IP literals only (127.0.0.1 or [::1]); hostnames, credentials and remote hosts are refused.",
+          "format": "string",
+          "default": "http://127.0.0.1:9601",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "PARANOID_MCP_MODE",
+          "description": "Access mode. read (default) never sends; wallet adds capped sends and other wallet writes; admin adds node stop and mining submission.",
+          "format": "string",
+          "default": "read",
+          "choices": ["read", "wallet", "admin"],
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "PARANOID_MCP_MAX_SEND_MICRONOID",
+          "description": "Per-call cap on amount + fee in microNOID (1 NOID = 1,000,000). Unset means every spend is refused, even in wallet mode.",
+          "format": "number",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "PARANOID_MCP_MAX_FEE_MICRONOID",
+          "description": "Optional additional fee-only cap in microNOID for sends, consolidation, contract and native writes.",
+          "format": "number",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "PARANOID_MCP_ALLOW_RAW_INTENT",
+          "description": "Allow tx_submit (submit an already-signed intent) in wallet mode. Off unless set to true.",
+          "format": "boolean",
+          "default": "false",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "PARANOID_MCP_MAX_RESULT_BYTES",
+          "description": "Results larger than this many bytes are replaced by a truncated summary. Minimum 1024.",
+          "format": "number",
+          "default": "524288",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "RUST_LOG",
+          "description": "Log filter. Logs go to stderr only; stdout is the MCP transport.",
+          "format": "string",
+          "default": "warn",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,12 +1,12 @@
 [package]
 name = "parano1d-mcp"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2024"
 rust-version = "1.96"
 description = "MCP server for a local Parano1d node"
 license = "Apache-2.0"
-repository = "https://github.com/0xC0rd31r0/parano1d-mcp"
-homepage = "https://github.com/0xC0rd31r0/parano1d-mcp"
+repository = "https://github.com/noidium/parano1d-mcp"
+homepage = "https://github.com/noidium/parano1d-mcp"
 documentation = "https://docs.rs/parano1d-mcp"
 readme = "README.md"
 keywords = ["mcp", "parano1d", "blockchain", "json-rpc", "ai-agent"]

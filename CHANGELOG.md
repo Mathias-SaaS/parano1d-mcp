@@ -4,6 +4,29 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-11-05
+
+No change to the server's behaviour, tools or guards.
+
+### Added
+
+- Install from crates.io: `cargo install parano1d-mcp --locked`.
+- A `server.json` for the official MCP Registry, as `io.github.noidium/parano1d-mcp`: the server
+  is listed as read-only by default, with sending disabled unless the user explicitly enables the
+  capped wallet mode.
+- The release workflow publishes the tagged version to crates.io (trusted publishing) and then to
+  the MCP Registry (GitHub OIDC), after the build, attestation and draft-release jobs.
+- Issue forms ask for the node version, the network, the tool and the JSON-RPC method involved,
+  and (optionally) whether an AI agent filed the request.
+
+### Changed
+
+- The repository moved to [github.com/noidium/parano1d-mcp](https://github.com/noidium/parano1d-mcp);
+  the old URL redirects.
+- CI's secret scan runs the pinned gitleaks CLI instead of gitleaks-action, which needs a
+  licence key in an organisation.
+- `CODEOWNERS`, `SECURITY.md` and the issue forms point to the new repository and maintainer.
+
 ## [0.1.3] - 2026-10-29
 
 ### Security

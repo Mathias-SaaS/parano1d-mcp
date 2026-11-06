@@ -1,6 +1,6 @@
 # parano1d-mcp
 
-[![CI](https://github.com/0xC0rd31r0/parano1d-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/0xC0rd31r0/parano1d-mcp/actions/workflows/ci.yml)
+[![CI](https://github.com/noidium/parano1d-mcp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/noidium/parano1d-mcp/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Rust 1.96+](https://img.shields.io/badge/rust-1.96%2B-orange.svg)](rust-toolchain.toml)
 [![MCP](https://img.shields.io/badge/MCP-stdio-6f42c1.svg)](https://modelcontextprotocol.io)
@@ -18,7 +18,7 @@ It exists because raw RPC access is all-or-nothing: any client that can reach th
 
 ## Status
 
-**v0.1.3, pre-release.** Read-only mode is the supported deployment. Wallet mode is opt-in and
+**v0.1.4, pre-release.** Read-only mode is the supported deployment. Wallet mode is opt-in and
 capped; admin mode and contract/native writes have not been exercised on mainnet (sends,
 consolidation, contract and native writes have been exercised on a private test network). The server has
 not been independently audited.
@@ -56,15 +56,25 @@ not been independently audited.
 
 ## Quick start
 
-### Build
+### Install from crates.io
 
 ```sh
-git clone https://github.com/0xC0rd31r0/parano1d-mcp
+cargo install parano1d-mcp --locked
+```
+
+This builds the server from source with the pinned dependency set and puts `parano1d-mcp` in
+`~/.cargo/bin`. MCP clients then run it by name (or by its full path). Prebuilt binaries are
+listed [below](#prebuilt-binaries).
+
+### Build from the repository
+
+```sh
+git clone https://github.com/noidium/parano1d-mcp
 cd parano1d-mcp
 cargo build --release --locked
 ```
 
-The binary is `target/release/parano1d-mcp`. It reads environment variables and speaks MCP on stdin/stdout. `--check`, `--version` and `--help` are diagnostic entry points; there is no config file.
+The binary is `target/release/parano1d-mcp` (or `~/.cargo/bin/parano1d-mcp` after `cargo install`). It reads environment variables and speaks MCP on stdin/stdout. `--check`, `--version` and `--help` are diagnostic entry points; there is no config file.
 
 ```sh
 ./target/release/parano1d-mcp --check
@@ -95,7 +105,7 @@ Each release attaches archives for macOS (arm64), Linux (x86_64) and Windows (x8
 
 ```sh
 sha256sum -c SHA256SUMS                       # or: shasum -a 256 -c SHA256SUMS
-gh attestation verify parano1d-mcp-v0.1.3-macos-arm64.tar.gz --repo 0xC0rd31r0/parano1d-mcp
+gh attestation verify parano1d-mcp-v0.1.4-macos-arm64.tar.gz --repo noidium/parano1d-mcp
 ```
 
 The binaries are built with `cargo auditable`, so `cargo audit bin <binary>` also audits the exact
@@ -288,6 +298,26 @@ The endpoints are configurable with `PARANOID_MCP_LIVE_URL` (default `http://127
 - CI runs formatting and clippy once, then tests and a release build on Ubuntu, macOS and Windows. `cargo-deny` checks advisories, licenses and sources on every run and weekly.
 - `Cargo.lock` is committed; this is a binary, not a library.
 
+## Registry
+
+- MCP Registry name: `mcp-name: io.github.noidium/parano1d-mcp`
+- crates.io: [`parano1d-mcp`](https://crates.io/crates/parano1d-mcp)
+- Source: [github.com/noidium/parano1d-mcp](https://github.com/noidium/parano1d-mcp)
+
+The registry entry describes the server as read-only by default; sending stays disabled unless
+you explicitly enable the capped wallet mode.
+
+## Requests and bugs
+
+Open an issue with the [bug report or feature request form](https://github.com/noidium/parano1d-mcp/issues/new/choose).
+The forms ask for the node version, the network (mainnet or testnet), the tool and the JSON-RPC
+method involved, so a report filed by a person or by an agent can be acted on without a
+round-trip. Never paste wallet keys, seeds or node data files.
+
+Security issues (a guard, mode or spend-cap bypass) go through
+[private vulnerability reporting](https://github.com/noidium/parano1d-mcp/security/advisories/new),
+not a public issue. See [SECURITY.md](SECURITY.md).
+
 ## Security
 
 Report vulnerabilities privately. See [SECURITY.md](SECURITY.md). Do not open a public issue for a guard bypass or a spend-cap bypass.
@@ -298,7 +328,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Changes to `src/manifest.rs`, `src/safet
 
 ## Maintainer
 
-Maintained by [@Mathias_SaaS](https://x.com/Mathias_SaaS).
+Maintained by Mathias Cordeiro — [@Mathias-SaaS](https://github.com/Mathias-SaaS) on GitHub, [@Mathias_SaaS](https://x.com/Mathias_SaaS) on X.
 
 ## License
 

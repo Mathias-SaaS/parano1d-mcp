@@ -8,6 +8,7 @@ body:
       value: |
         Do not paste wallet keys, seeds, balances, private addresses, or node data files.
         For a security issue, read SECURITY.md and report privately instead.
+        Agents filing on a user's behalf: fill every field you can from tool output, and say what you could not determine.
   - type: input
     id: version
     attributes:
@@ -26,7 +27,14 @@ body:
     id: node
     attributes:
       label: Parano1d node version
-      description: The node's version or the `getNativeProtocol` tip height.
+      description: The node's version (for example `v2.1.0`), from `node_overview` or `parano1d-mcp --check`.
+    validations:
+      required: true
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network
+      options: [mainnet, testnet, unsure]
     validations:
       required: true
   - type: dropdown
@@ -36,10 +44,24 @@ body:
       options: [read, wallet, admin]
     validations:
       required: true
+  - type: input
+    id: tool
+    attributes:
+      label: Tool and action
+      description: The MCP tool and action that misbehaved, for example `chain_query` / `block_details`.
+      placeholder: chain_query / block_details
+    validations:
+      required: true
+  - type: input
+    id: rpc_method
+    attributes:
+      label: JSON-RPC method involved
+      description: The node method behind the call, if known, for example `paranoid_getBlockDetails`. Leave empty if unknown.
   - type: textarea
     id: steps
     attributes:
       label: Steps to reproduce
+      description: The tool call's arguments (redacted) and what happened before it.
     validations:
       required: true
   - type: textarea
@@ -50,9 +72,21 @@ body:
     id: actual
     attributes:
       label: Actual result
+      description: The tool's result or error text (redacted).
   - type: textarea
     id: logs
     attributes:
       label: Redacted logs
       description: Output with `RUST_LOG=info`. Remove addresses, balances, and anything private.
       render: text
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Requested by an AI agent? (optional)
+      description: Helps triage reports written from an agent's own tool output.
+      options:
+        - "No, a person"
+        - "Yes, an agent filed it for a person"
+        - "Yes, an agent filed it on its own"
+    validations:
+      required: false
