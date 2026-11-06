@@ -144,12 +144,19 @@ jobs:
             cat ./*.sha256 > SHA256SUMS
             sha256sum -c SHA256SUMS
           )
+          # Only a SemVer pre-release tag (v1.2.3-rc.1, v1.2.3-beta) is marked
+          # pre-release; a plain version must be able to become "latest" when
+          # the draft is published.
+          prerelease=()
+          case "$TAG" in
+            *-*) prerelease=(--prerelease) ;;
+          esac
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "a release for $TAG already exists; uploading to it"
           else
             gh release create "$TAG" \
               --draft \
-              --prerelease \
+              ${prerelease[@]+"${prerelease[@]}"} \
               --title "parano1d-mcp $TAG" \
               --notes-file CHANGELOG.md
           fi

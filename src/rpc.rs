@@ -13,11 +13,21 @@ const MAX_RPC_REQUEST_BYTES: usize = 2_237_632;
 /// Generous bound for a loopback response; the largest known response is a
 /// contract receipt near 1.1 MB.
 const MAX_RPC_RESPONSE_BYTES: usize = 16 * 1024 * 1024;
+/// Connecting to a loopback port takes microseconds; a port that does not
+/// answer within this time has no node behind it.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+/// Where to get a node, named in every "no node answered" error.
+pub const NODE_DOWNLOAD_HINT: &str =
+    "Install and start one: https://parano1d.org (Downloads), then retry.";
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum RpcError {
     #[error("transport: {0}")]
     Transport(String),
+    /// No connection could be made (refused, or the connect timed out), so
+    /// nothing was sent: there is no node listening at `url`.
+    #[error("No Parano1d node answered at {url}. {NODE_DOWNLOAD_HINT} ({detail})")]
+    Unreachable { url: String, detail: String },
     #[error("HTTP {status}: {body}")]
     Http { status: u16, body: String },
     #[error("JSON-RPC {code}: {message}")]
@@ -37,9 +47,14 @@ impl RpcError {
         matches!(self, Self::JsonRpc { code: -32601, .. })
     }
 
+    /// True when no node is listening at the RPC URL.
+    pub fn is_unreachable(&self) -> bool {
+        matches!(self, Self::Unreachable { .. })
+    }
+
     pub(crate) fn is_retryable(&self) -> bool {
         match self {
-            Self::Transport(_) | Self::Invalid(_) => true,
+            Self::Transport(_) | Self::Invalid(_) | Self::Unreachable { .. } => true,
             Self::Http { status, .. } => *status >= 500,
             Self::JsonRpc { .. } | Self::RequestTooLarge(_) => false,
         }
@@ -49,18 +64,24 @@ impl RpcError {
     /// request: the request was sent but no usable response came back. A
     /// JSON-RPC error is a definite rejection (the node answered), an HTTP 4xx
     /// is the transport refusing the request, and a too-large request is
-    /// refused before it is sent, so none of those are ambiguous.
+    /// refused before it is sent, so none of those are ambiguous. A failed
+    /// connect sent nothing either.
     pub fn outcome_unknown(&self) -> bool {
         match self {
             Self::Transport(_) | Self::Invalid(_) => true,
             Self::Http { status, .. } => *status >= 500,
-            Self::JsonRpc { .. } | Self::RequestTooLarge(_) => false,
+            Self::JsonRpc { .. } | Self::RequestTooLarge(_) | Self::Unreachable { .. } => false,
         }
     }
 
     pub fn to_json(&self) -> Value {
         match self {
             Self::Transport(message) => json!({"kind": "transport", "message": message}),
+            Self::Unreachable { url, .. } => json!({
+                "kind": "node_unreachable",
+                "url": url,
+                "message": self.to_string(),
+            }),
             Self::Http { status, body } => {
                 json!({"kind": "http", "status": status, "body": body})
             }
@@ -92,6 +113,7 @@ impl RpcClient {
         let http = reqwest::Client::builder()
             .user_agent(concat!("parano1d-mcp/", env!("CARGO_PKG_VERSION")))
             .timeout(Duration::from_secs(60))
+            .connect_timeout(CONNECT_TIMEOUT)
             .no_proxy()
             .redirect(reqwest::redirect::Policy::none())
             .build()
@@ -253,7 +275,7 @@ impl RpcClient {
             .body(bytes)
             .send()
             .await
-            .map_err(|e| RpcError::Transport(format!("{e}")))?;
+            .map_err(|e| send_error(&self.url, &e))?;
         let status = response.status().as_u16();
         if let Some(length) = response.content_length() {
             ensure_response_size(usize::try_from(length).unwrap_or(usize::MAX))?;
@@ -275,6 +297,29 @@ impl RpcClient {
         );
         decode_response(status, body)
     }
+}
+
+/// Classify a failed send. A connect failure (refused, or the connect timed
+/// out) means no node is listening; anything after the connection opened stays
+/// a transport error, because the node may have received the request.
+fn send_error(url: &str, error: &reqwest::Error) -> RpcError {
+    if error.is_connect() {
+        RpcError::Unreachable {
+            url: url.to_string(),
+            detail: truncate(&root_cause(error), 200),
+        }
+    } else {
+        RpcError::Transport(format!("{error}"))
+    }
+}
+
+/// The innermost error message, e.g. "Connection refused (os error 61)".
+fn root_cause(error: &(dyn std::error::Error + 'static)) -> String {
+    let mut current = error;
+    while let Some(source) = current.source() {
+        current = source;
+    }
+    current.to_string()
 }
 
 /// Turn an HTTP status and a complete (already size-capped) body into a JSON
@@ -571,6 +616,62 @@ mod tests {
             started.elapsed()
         );
         assert!(matches!(error, RpcError::Transport(_)), "{error}");
+        // A peer that accepted the connection is not "no node": a write must
+        // still be reported as an unknown outcome.
+        assert!(error.outcome_unknown());
+        assert!(!error.is_unreachable());
+    }
+
+    /// A closed port is "no node answered", with the URL and where to get a
+    /// node, and it is a definite failure: nothing was sent.
+    #[tokio::test]
+    async fn a_closed_port_says_no_node_answered() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+        let addr = listener.local_addr().expect("address");
+        drop(listener);
+        let url = format!("http://{addr}");
+        let client = RpcClient::new(url.clone()).expect("client");
+        let error = client
+            .call("blockCount", vec![], Duration::from_secs(5), false)
+            .await
+            .expect_err("nothing listens there");
+        assert!(error.is_unreachable(), "{error:?}");
+        assert!(!error.outcome_unknown(), "a failed connect sent nothing");
+        let text = error.to_string();
+        assert!(
+            text.starts_with(&format!(
+                "No Parano1d node answered at {url}. Install and start one: https://parano1d.org (Downloads), then retry. ("
+            )),
+            "{text}"
+        );
+        assert!(text.len() < 400, "{} bytes", text.len());
+        let value = error.to_json();
+        assert_eq!(value["kind"], "node_unreachable");
+        assert_eq!(value["url"], url.as_str());
+        assert_eq!(value["message"], text.as_str());
+        // A batch (node_overview, the startup probe) reports the same error
+        // for every call.
+        let results = client
+            .batch_read(
+                &[("getChainInfo", vec![]), ("getPeerCount", vec![])],
+                Duration::from_secs(5),
+            )
+            .await;
+        assert!(
+            results
+                .iter()
+                .all(|result| matches!(result, Err(error) if error.is_unreachable()))
+        );
+    }
+
+    #[test]
+    fn unreachable_detail_is_bounded() {
+        let error = RpcError::Unreachable {
+            url: "http://127.0.0.1:9601".into(),
+            detail: truncate(&"x".repeat(10_000), 200),
+        };
+        assert!(error.to_string().len() < 400);
+        assert!(error.is_retryable());
     }
 
     #[test]

@@ -18,7 +18,7 @@ It exists because raw RPC access is all-or-nothing: any client that can reach th
 
 ## Status
 
-**v0.1.4, pre-release.** Read-only mode is the supported deployment. Wallet mode is opt-in and
+**v0.1.5, pre-release.** Read-only mode is the supported deployment. Wallet mode is opt-in and
 capped; admin mode and contract/native writes have not been exercised on mainnet (sends,
 consolidation, contract and native writes have been exercised on a private test network). The server has
 not been independently audited.
@@ -50,9 +50,58 @@ not been independently audited.
 
 ## Requirements
 
-- Parano1d node v2.0.4 or v2.1.0, RPC at `http://127.0.0.1:9601` (default).
+- Parano1d node v2.0.4 or v2.1.0, RPC at `http://127.0.0.1:9601` (default). No node yet? See
+  [Get a Parano1d node](#get-a-parano1d-node).
 - Rust 1.96 to build; prebuilt binaries need no toolchain.
 - The server must run on the same host as the node, because the RPC URL is restricted to loopback.
+
+## Get a Parano1d node
+
+`parano1d-mcp` is a bridge: every tool reads from, or writes through, a Parano1d node running on
+the same machine. Without one, each tool (and `--check`) answers *"No Parano1d node answered at
+http://127.0.0.1:9601. Install and start one: https://parano1d.org (Downloads), then retry."*
+Get the node from the official Parano1d project; this repository links to it and does not
+redistribute it.
+
+**Desktop app (simplest).** Download the GUI wallet for your computer from
+[parano1d.org](https://parano1d.org) (Downloads): Windows x86-64, macOS (Apple Silicon or Intel),
+or Debian/Ubuntu (x86-64 or ARM64). The app runs its own full node and serves JSON-RPC on
+`127.0.0.1:9601`, this server's default, so no configuration is needed; keep the app open while
+you use the MCP server. Verify the download against `SHA256SUMS` from the same release.
+
+**Headless (servers, automation).** Download the Core archive for your platform
+(`parano1d-core-vVERSION-<platform>`, with `parano1d`, `parano1d-cli` and `parano1d-miner`) and
+`SHA256SUMS` from the official releases:
+[git.parano1d.org/ignotusnemo/parano1d/releases](https://git.parano1d.org/ignotusnemo/parano1d/releases)
+(canonical) or the GitHub mirror
+[github.com/proof-native/parano1d/releases](https://github.com/proof-native/parano1d/releases).
+Check the digest before extracting, then:
+
+```sh
+./parano1d --check-hardware                          # must end with: NODE READY
+./parano1d --mode node --rpc-listen 127.0.0.1:9601   # an ordinary, non-mining node
+```
+
+In another terminal, `./parano1d-cli status` shows the node, and `parano1d-mcp --check` shows what
+this server sees. `127.0.0.1:9601` is the node's default RPC listener; keep it on loopback and never
+expose port 9601. On first start the node creates `~/.parano1d/parano1d.toml` and
+`~/.parano1d/data/` (`--data-dir PATH` picks another directory). To run it as a service, follow
+upstream's [Run a node on Linux](https://github.com/proof-native/parano1d/blob/main/docs/operate/node.md).
+If your node listens elsewhere on loopback, set `PARANOID_RPC_URL` (see [Configuration](#configuration)).
+
+**What the node needs.**
+
+- **CPU:** x86-64 with SSE4.1 and PCLMULQDQ, or ARM64 with NEON and PMULL. `--check-hardware`
+  confirms it; a VM can hide these instructions even on a newer host.
+- **Memory:** upstream qualified verifying nodes on 4 CPU cores and 8 GiB RAM, with a 1.65 GiB
+  peak under full workloads. A v2.1.0 mainnet node has also kept up with the tip on a 1 GB RAM VM.
+- **Disk:** no fixed figure: a node keeps compact headers, the current UTXO State and only the
+  latest 42 block bodies, so it grows with State, not with chain age. Leave room for one staged
+  snapshot. A desktop node's data directory measured about 45 MB on 2026-11-06
+  (`du -sh ~/.parano1d/data`). Use an SSD.
+- **Sync:** a new node bootstraps from a proof: it authenticates the current State and verifies
+  the recent blocks instead of replaying the whole history.
+- **Network:** persistent outbound TCP; inbound TCP 9600 only for a public node.
 
 ## Quick start
 
@@ -105,7 +154,7 @@ Each release attaches archives for macOS (arm64), Linux (x86_64) and Windows (x8
 
 ```sh
 sha256sum -c SHA256SUMS                       # or: shasum -a 256 -c SHA256SUMS
-gh attestation verify parano1d-mcp-v0.1.4-macos-arm64.tar.gz --repo noidium/parano1d-mcp
+gh attestation verify parano1d-mcp-v0.1.5-macos-arm64.tar.gz --repo noidium/parano1d-mcp
 ```
 
 The binaries are built with `cargo auditable`, so `cargo audit bin <binary>` also audits the exact

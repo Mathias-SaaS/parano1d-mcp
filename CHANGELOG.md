@@ -4,6 +4,28 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-11-06
+
+### Added
+
+- README: "Get a Parano1d node" — the desktop app from parano1d.org (Downloads), the official
+  Core release archives for headless use, the start command for an ordinary node with RPC on
+  `127.0.0.1:9601`, and what a node needs (CPU, memory, disk, sync, network).
+
+### Changed
+
+- When no node answers at the RPC URL (connection refused, or the connect timed out), `--check`
+  and every tool now say so and where to get one: "No Parano1d node answered at <url>. Install and
+  start one: https://parano1d.org (Downloads), then retry." The reason follows in brackets and the
+  text stays bounded. `--check` reports it once (not once per probe call) and also prints it on
+  stderr. Structured errors use the kind `node_unreachable`.
+- Connecting to the node times out after 5 seconds. A failed connect sent nothing, so a write
+  that could not connect is reported as a definite failure, not as an unknown outcome; a
+  connection that opened and then timed out is still an unknown outcome and is never retried.
+- The release workflow no longer marks a plain version (`v0.1.5`) as a pre-release, so it can
+  become the latest release when its draft is published; a tag with a SemVer pre-release suffix
+  (`-rc.1`, `-beta`) is still marked pre-release. The release is still created as a draft.
+
 ## [0.1.4] - 2026-11-05
 
 No change to the server's behaviour, tools or guards.

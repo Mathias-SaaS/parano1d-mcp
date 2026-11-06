@@ -847,6 +847,68 @@ fn resets_and_stalls_are_transport_errors() {
     }
 }
 
+/// A loopback URL with nothing listening: bind an ephemeral port, then free it.
+fn closed_url() -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
+    let addr = listener.local_addr().expect("address");
+    drop(listener);
+    format!("http://{addr}")
+}
+
+fn no_node_sentence(url: &str) -> String {
+    format!(
+        "No Parano1d node answered at {url}. Install and start one: https://parano1d.org (Downloads), then retry."
+    )
+}
+
+#[test]
+fn no_node_is_reported_with_where_to_get_one() {
+    let url = closed_url();
+    let sentence = no_node_sentence(&url);
+    let mut mcp = Mcp::spawn(
+        "wallet",
+        &url,
+        &[("PARANOID_MCP_MAX_SEND_MICRONOID", "1000000")],
+    );
+    for (tool, arguments) in [
+        ("chain_query", json!({"action": "chain_info"})),
+        ("rpc_call", json!({"method": "getChainInfo"})),
+        ("native_read", json!({"action": "protocol"})),
+        (
+            "wallet_plan_send",
+            json!({"to": "o1fake", "amount_micronoid": 1000, "fee_micronoid": 0}),
+        ),
+    ] {
+        let error = mcp.error(tool, arguments);
+        assert!(error.contains(&sentence), "{tool}: {error}");
+        assert!(!error.contains("outcome unknown"), "{tool}: {error}");
+        assert!(error.len() < 1_000, "{tool}: {} bytes", error.len());
+    }
+    mcp.assert_alive();
+}
+
+#[test]
+fn check_without_a_node_says_where_to_get_one() {
+    let url = closed_url();
+    let output = Command::new(env!("CARGO_BIN_EXE_parano1d-mcp"))
+        .arg("--check")
+        .env("PARANOID_RPC_URL", &url)
+        .env("RUST_LOG", "error")
+        .output()
+        .expect("run --check");
+    assert_eq!(output.status.code(), Some(1));
+    let sentence = no_node_sentence(&url);
+    let report: Value = serde_json::from_slice(&output.stdout).expect("JSON report");
+    let errors = report["capabilities"]["errors"].as_array().expect("errors");
+    assert_eq!(errors.len(), 1, "{errors:?}");
+    assert!(
+        errors[0].as_str().is_some_and(|e| e.starts_with(&sentence)),
+        "{errors:?}"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains(&sentence), "{stderr}");
+}
+
 // ---------------------------------------------------------------------------
 // Tool-input hostility
 // ---------------------------------------------------------------------------

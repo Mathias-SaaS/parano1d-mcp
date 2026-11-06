@@ -100,6 +100,29 @@ pub async fn probe(rpc: &RpcClient) -> Capabilities {
         .pop()
         .unwrap_or_else(|| Err(RpcError::Invalid("probe response missing".into())));
 
+    // With no node at the URL all three calls fail with the same error: report
+    // it once, as the actionable "no node answered" sentence, not three times.
+    if let Err(error) = &chain
+        && error.is_unreachable()
+    {
+        let message = error.to_string();
+        return Capabilities {
+            detected: "unknown".into(),
+            native_supported: false,
+            native_active: false,
+            native_activation_height: None,
+            native_tip_height: None,
+            native_runtime_available: false,
+            contract_runtime: false,
+            checked_height: None,
+            note: message.clone(),
+            errors: vec![message],
+            chain_info_raw: None,
+            native_protocol_raw: None,
+            contract_protocol_raw: None,
+        };
+    }
+
     let chain_info_raw = chain.as_ref().ok().cloned();
     let checked_height = match &chain {
         Ok(value) => value.get("height").and_then(Value::as_u64),
@@ -315,6 +338,20 @@ mod tests {
         let cache = CapabilityCache::new(rpc);
         let capabilities = cache.get(false).await;
         assert!(!capabilities.errors.is_empty());
+        // No node at all: one actionable error, not one per probe call, and a
+        // gated tool refuses with the same sentence.
+        assert_eq!(capabilities.errors.len(), 1, "{:?}", capabilities.errors);
+        assert!(
+            capabilities.errors[0].starts_with(
+                "No Parano1d node answered at http://127.0.0.1:1. Install and start one: https://parano1d.org (Downloads), then retry."
+            ),
+            "{:?}",
+            capabilities.errors
+        );
+        let refusal = capabilities
+            .gate_error(Gate::NativeSupported)
+            .expect("refused");
+        assert!(refusal.contains("No Parano1d node answered"), "{refusal}");
         assert!(
             cache.inner.lock().unwrap().is_none(),
             "a failed probe was cached"

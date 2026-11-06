@@ -3,7 +3,7 @@
   "name": "io.github.noidium/parano1d-mcp",
   "title": "Parano1d node",
   "description": "Local Parano1d node over MCP. Read-only by default; sending needs the opt-in, capped wallet mode.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "websiteUrl": "https://github.com/noidium/parano1d-mcp",
   "repository": {
     "url": "https://github.com/noidium/parano1d-mcp",
@@ -15,7 +15,7 @@
       "registryType": "cargo",
       "registryBaseUrl": "https://crates.io",
       "identifier": "parano1d-mcp",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "transport": {
         "type": "stdio"
       },

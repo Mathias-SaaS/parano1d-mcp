@@ -1,6 +1,6 @@
 [package]
 name = "parano1d-mcp"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 rust-version = "1.96"
 description = "MCP server for a local Parano1d node"
