@@ -88,10 +88,12 @@ async fn check_node() -> Result<(), Box<dyn std::error::Error>> {
         "capabilities": capabilities,
     });
     println!("{}", serde_json::to_string_pretty(&report)?);
-    if report["capabilities"]["errors"]
-        .as_array()
-        .is_some_and(|errors| !errors.is_empty())
-    {
+    if !capabilities.errors.is_empty() {
+        // The report is on stdout; say what went wrong on stderr too, so a
+        // person running `--check` sees it (e.g. where to get a node).
+        for error in &capabilities.errors {
+            eprintln!("{error}");
+        }
         std::process::exit(1);
     }
     Ok(())

@@ -751,6 +751,25 @@ mod tests {
     }
 
     #[test]
+    fn no_node_errors_name_the_url_and_where_to_get_a_node() {
+        let error = RpcError::Unreachable {
+            url: "http://127.0.0.1:9601".into(),
+            detail: "Connection refused (os error 61)".into(),
+        };
+        let expected = "No Parano1d node answered at http://127.0.0.1:9601. Install and start one: https://parano1d.org (Downloads), then retry.";
+        let read = rpc_error_string(error.clone());
+        assert!(read.starts_with(expected), "{read}");
+        assert!(
+            read.ends_with("(Connection refused (os error 61))"),
+            "{read}"
+        );
+        // A failed connect sent nothing, so a write is a definite failure.
+        let write = write_error_string(error);
+        assert!(write.starts_with(expected), "{write}");
+        assert!(!write.contains("outcome unknown"), "{write}");
+    }
+
+    #[test]
     fn lost_write_responses_are_reported_as_unknown() {
         for error in [
             RpcError::Transport("timeout".into()),
