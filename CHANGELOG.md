@@ -22,6 +22,9 @@ All notable changes to this project are documented here. The format is based on
 - Connecting to the node times out after 5 seconds. A failed connect sent nothing, so a write
   that could not connect is reported as a definite failure, not as an unknown outcome; a
   connection that opened and then timed out is still an unknown outcome and is never retried.
+- The release workflow no longer marks a plain version (`v0.1.5`) as a pre-release, so it can
+  become the latest release when its draft is published; a tag with a SemVer pre-release suffix
+  (`-rc.1`, `-beta`) is still marked pre-release. The release is still created as a draft.
 
 ## [0.1.4] - 2026-11-05
 
